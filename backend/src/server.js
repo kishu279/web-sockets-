@@ -213,10 +213,18 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const cors = require("cors");
 
+const { z } = require("zod");
+
 const app = express();
 app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
+
+const userSchema = z.object({
+  // Schema
+  email: z.string().email(),
+  password: z.string(),
+});
 
 app.use(
   cors({
@@ -241,7 +249,16 @@ app.get("/", (req, res) => {
 
 // user is created in this route
 app.post("/signup", (req, res) => {
-  const { email, password } = req.body;
+  const result = userSchema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      message: result.error.format(),
+    });
+  }
+
+  const { email, password } = result.data;
 
   try {
     user[email] = password;
@@ -293,7 +310,7 @@ server.on("upgrade", (req, socket, head) => {
   const token = params.get("token");
   console.log(token);
 
-  if (!token || !validTokens.has(token)) {
+  if (!token && !validTokens.has(token)) {
     socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
     socket.destroy();
     return;
@@ -309,6 +326,7 @@ server.on("upgrade", (req, socket, head) => {
 });
 
 wss.on("connection", (ws) => {
+  console.log("connected");
   ws.on("error", (error) => {
     console.error(error);
   });

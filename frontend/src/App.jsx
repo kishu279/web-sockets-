@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRecoilState } from "recoil";
 import { socketAtom } from "./state/atom";
+import userSchema from "./db/dataSchema";
 
 const App = () => {
   const [inputFieldEmail, setInputFieldEmail] = useState("");
@@ -14,16 +15,23 @@ const App = () => {
     // email and password
     // fetch request to the server
 
+    const result = userSchema.safeParse({
+      email: inputFieldEmail,
+      password: inputFieldPassword,
+    });
+
+    if (!result.success) {
+      console.log("Validataion failed: " + result.error.format());
+      return;
+    }
+
     try {
       const response = await fetch("http://localhost:3000/signin", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: inputFieldEmail,
-          password: inputFieldPassword,
-        }),
+        body: JSON.stringify(result.data),
       });
 
       const data = await response.json(); // all the data is in the form of json
